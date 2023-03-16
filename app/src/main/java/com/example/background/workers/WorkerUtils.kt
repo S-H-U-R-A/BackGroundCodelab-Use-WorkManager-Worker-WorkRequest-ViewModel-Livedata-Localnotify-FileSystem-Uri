@@ -9,6 +9,7 @@ import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
 import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.annotation.WorkerThread
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -150,35 +151,45 @@ fun blurBitmap(bitmap: Bitmap, applicationContext: Context): Bitmap {
  * @return Uri for temp file with bitmap
  * @throws FileNotFoundException Throws if bitmap file cannot be found
  */
+
 @Throws(FileNotFoundException::class)
 fun writeBitmapToFile(applicationContext: Context, bitmap: Bitmap): Uri {
 
     //SE CREA UN NOMBRE PARA EL ARCHIVO
     val name = String.format("blur-filter-output-%s.png", UUID.randomUUID().toString() )
 
-    //SE CREA EL DIRECTORIO/CARPETA
+
+    //EL DIRECTORIO INDICADO POR fileDir
+    //QUE ES UNA CARPETA CON EL NOMBRE DE FILES QUE SE ENCUENTRA EN LA CARPETA
+    //DEL PAQUETE DE LA APLICACIÓN
     val outputDir = File(
-        applicationContext.filesDir,
-        OUTPUT_PATH
+        applicationContext.filesDir, //CREA LA CARPETA FILES
+        OUTPUT_PATH// NOMBRE DE LO QUE QUEREMOS CREAR
     )
 
     //SI EL DIRECTORIO/CARPETA NO EXISTE LO CREA
-    if (!outputDir.exists()) {
-        outputDir.mkdirs() // DEBERIA SUCEDER
+    if ( !outputDir.exists() ) {
+        // ACA LE DECIMOS QUE CON ESE NOMBRE GUARDADO EN OUTPUT_PATH CREE UN DIRECTORIO
+        outputDir.mkdirs()
     }
 
     //SE CONFIGURA EL ARCHIVO DE SALIDA, CON SU NOMBRE Y EN QUE DIRECTORIO DEBE ESTAR
-    val outputFile = File(outputDir, name)
+    val outputFile = File(
+        //DIRECTORIO DONDE SE VA A ALMACENAR EL ARCHIVO
+        outputDir,
+        //NOMBRE DEL ARCHIVO
+        name
+    )
 
     //ARCHIVO
     var out: FileOutputStream? = null
 
     try {
-        //AQUI SI SE CREA EL LINEZO DEL ARCHIVO
+        //ABRIMOS EL ARCHIVO PARA EDICIÓN
         out = FileOutputStream(outputFile)
 
-        //SE INDICA EL TIPO DE LA IMAGEN, EN ESTE CASO PNG,
-        // SU CALIDAD Y EN QUE ARCHIVO O LIENZO DEBE HACERLO
+        //ACÁ SE CREA EL ARCHIVO EN FISICO COMO TAL Y
+        //SE PINTA LA IMAGEN EN EL ARCHIVO
         bitmap.compress(
             Bitmap.CompressFormat.PNG,
             0 /* ignored for PNG */,
@@ -186,9 +197,7 @@ fun writeBitmapToFile(applicationContext: Context, bitmap: Bitmap): Uri {
         )
 
     } finally {
-        //SI LO ANTERIOR SE EJECUTO CON EXITO
-        //Y EL ARCHIVO DE SALIDA NO FUE NULO
-        //ENTONCES CERRAMOS EL ARCHIVO
+        //CERRAMOS EL ARCHIVO EDITABLE
         out?.let {
             try {
                 it.close()
@@ -197,6 +206,7 @@ fun writeBitmapToFile(applicationContext: Context, bitmap: Bitmap): Uri {
 
         }
     }
+
     //OBTENEMOS EL URI DEL ARCHIVO Y LO RETORNAMOS
     return Uri.fromFile(outputFile)
 }

@@ -16,10 +16,14 @@
 
 package com.example.background
 
+import android.annotation.SuppressLint
+import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.Observer
+import androidx.work.WorkInfo
 import com.example.background.databinding.ActivityBlurBinding
 
 class BlurActivity : AppCompatActivity() {
@@ -44,6 +48,64 @@ class BlurActivity : AppCompatActivity() {
         //SE CONFIGURA EL CLICK()
         binding.goButton.setOnClickListener {
             viewModel.applyBlur(blurLevel)
+        }
+
+        //SE OBSERVA EL OBJETO WORK INFO ASOCIADO AL WORKREQUEST QUE EJECUTA EL WORKER DE SAVE-IMAGE
+        viewModel.outputWorkInfos.observe(this, workInfosObserver() )
+
+        //EVENTO CLICK DEL BOTON DE VER ARCHIVO
+        binding.seeFileButton.setOnClickListener {
+            //SI EL VALOR DE OUTPUT URI NO ES NULO
+            viewModel.outputUri?.let { currentUri ->
+                //SI EL OUTPUT-URI TIENE UN VALOR INTENTAMOS ABRIR LA URI
+                Intent(Intent.ACTION_VIEW, currentUri).apply {
+                    resolveActivity(packageManager)?.run {
+                        startActivity(this@apply)
+                    }
+                }
+            }
+        }
+
+        //EVENTO CLICK DE CANCELAR EL TRABAJO
+        binding.cancelButton.setOnClickListener { viewModel.cancelWork() }
+    }
+
+    // Define the observer function
+    private fun workInfosObserver(): Observer< List<WorkInfo> > {
+        return Observer { listOfWorkInfo ->
+
+            // Note that these next few lines grab a single WorkInfo if it exists
+            // This code could be in a Transformation in the ViewModel; they are included here
+            // so that the entire process of displaying a WorkInfo is in one location.
+
+            //SI NO HAY INFO EN LA LISTA ENVUELTA POR EL LIVEDATA
+            //NO HAGA NADA Y SALGA DE LA FUNCIÓN
+            if (listOfWorkInfo.isNullOrEmpty()) {
+                return@Observer
+            }
+
+            //OBTENEMOS EL PRIMER ELEMENTO WORKINFO DE LA LISTA
+            val workInfo: WorkInfo = listOfWorkInfo[0]
+
+            //SI EL ESTADO DE ESTE WORKRWUEST ES FINALIZADO,
+            //DE LO CONTRARIO SE SUPONE QUE ESTA EN EJECUCIÓN
+            if ( workInfo.state.isFinished )  {
+                showWorkFinished()
+
+                //RECUPERAMOS LA SALIDA DEL WORKREQUEST, OSEA EL OBJETO DATA
+                val outputImageUri = workInfo.outputData.getString( KEY_IMAGE_URI )
+
+                //SI ESTA SALIDA NO ES NULA O VACIA
+                //SETEAMOS EL VALOR DE LA VARIABLE DEL VIEMODEL
+                //Y HABILITAMOS EL BOTON PARA LA VISUALIZACIÓN DE LA IMAGEN
+                if (!outputImageUri.isNullOrEmpty() ){
+                    viewModel.setOutputUri( outputImageUri )
+                    binding.seeFileButton.visibility = View.VISIBLE
+                }
+
+            } else {
+                showWorkInProgress()
+            }
         }
     }
 
